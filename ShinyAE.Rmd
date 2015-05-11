@@ -1,0 +1,144 @@
+---
+title: "Affects of Atrazine on Early Amphibian Growth and Development"
+author: "Claire Brumbaugh-Smith"
+date: "May 8, 2015"
+output:
+  html_document:
+    keep_md: yes
+runtime: shiny
+---
+
+
+
+## Introduction
+In the past 60 years, atrazine use has increased sharply, becoming the most commonly found herbicide contaminant in US waterways. Concurrently amphibian populations have been experiencing an unprecedented decline. As atrazine is so prevalent in the environment, understanding atrazine’s effects on amphibians is essential for mitigating its possible negative effects on amphibians at a population level. Current research on atrazine is generally focused on the lethal effects of high atrazine concentrations on embryonic to late-stage tadpoles, missing its potential sublethal and endocrine disrupting effects on amphibians. 
+
+##Data Collection
+In this randomized study, embryos exposed to sublethal concentrations of atrazine were paired with varying prior maternal exposure so that these environmentally relevant conditions could be considered when looking at the sublethal effects of atrazine on amphibian growth and development.
+
+##Explaination of Variables
+Stage at Hatching is the Holbert stage at which the embryo hatched from its jelly capsule. 
+
+Days to Hatching is the time, in days, until the embryo hatched from its jelly capsule.
+
+SVL at Hatching is the Snout-vent length of the larvae, in mm, after it hatched from its jelly capsule.
+
+Stage at Death is the Holbert stage at which a embryo/larvae died.
+
+Time to Death is the time, in days, until the embryo/larvae died. 
+
+##Explaination of Graphs
+The data is presented below in three graphs. The first two graphs show the effects of ambient and maternal atrazine exposure on a range measued variables. Two statistically significantly different variables were selected from these graphs (SVL and Days to Hatching) and plotted in graph three. This allows us to predict the expected range of SVL and days to hatching, given know ambient and maternal atrazine exposures. 
+
+
+##Ambient Atrazine Exposure
+```{r, echo=FALSE}
+library(ggplot2)
+library(dplyr)
+library(ggthemes)
+library(ellipse)
+
+aae <- read.csv("AAE.csv", header=TRUE,  stringsAsFactors = FALSE) %>% tbl_df()
+
+
+y.choices <- c("Stage.at.Hatching", "Days.to.Hatching", "SVL.at.Hatching", "Stage.at.Death", "Days.to.Death")
+
+
+inputPanel(
+   selectInput("yaxisvar", label = "Response Variable:",
+              choices = y.choices,
+              selected = "SVL.at.Day.3",
+              multiple = FALSE)
+)
+
+renderPlot({
+  y.variable <- input$yaxisvar
+  
+aae <- aae %>%
+       mutate_(x="Ambient.Atrazine.Exposure",
+               y=y.variable)
+  
+ggplot(data=aae, aes(x=x, y=y)) + 
+       geom_line() + 
+       scale_x_log10(name="Atrazine Concentration (ppb)") + 
+       scale_y_continuous(name=y.variable) +
+       theme_bw()
+})
+```
+
+##Maternal Atrazine Exposure
+```{r, echo=FALSE}
+library(ggplot2)
+library(dplyr)
+
+mae <- read.csv("MAE.csv", header=TRUE,  stringsAsFactors = FALSE) %>% tbl_df()
+
+y.choices <- c("Stage.at.Hatching", "Days.to.Hatching", "SVL.at.Hatching", "Stage.at.Death", "Days.to.Death")
+
+
+inputPanel(
+   selectInput("yaxisvar", label = "Response Variable:",
+              choices = y.choices,
+              selected = "SVL.at.Day.3",
+              multiple = FALSE)
+)
+
+renderPlot({
+  y.variable <- input$yaxisvar
+  
+mae <- mae %>%
+       mutate_(x="Maternal.Atrazine.Exposure",
+               y=y.variable)
+  
+ggplot(data=mae, aes(x=x, y=y)) + 
+       geom_line() + 
+       scale_x_log10(name="Atrazine Concentration (ppb)") + 
+       scale_y_continuous() +
+       theme_bw()
+})
+```
+
+
+
+##Interaction of Ambient and Maternal Atrazine Exposure
+```{r, echo=FALSE}
+library(ggplot2)
+library(dplyr)
+library(ellipse)
+
+
+ad <- read.csv("atrazinedata.csv", header=TRUE) %>% tbl_df()
+ad$ME <- as.factor(ad$ME)
+
+
+
+inputPanel(
+  selectInput("var.one", label = "Ambient Atrazine Exposure:",
+              choices = c(0, 0.1, 1, 10, 100), selected = 0)
+)
+
+renderPlot({
+xvar <- input$var.one
+
+adfilter <- filter(ad, AE == xvar)
+
+centroids <- aggregate(cbind(DTH,SVL)~ME + AE,adfilter,mean)
+conf.rgn  <- do.call(rbind,lapply(unique(adfilter$ME),function(t)
+  data.frame(ME=as.character(t),
+             ellipse(cov(adfilter[adfilter$ME==t,1:2]),
+                     centre=as.matrix(centroids[t,3:4]),
+                     level=0.95),
+             stringsAsFactors=FALSE)))
+
+filter(ad, AE == xvar) %>%
+ggplot(aes(x=DTH,y=SVL, color = ME))+
+      geom_point(size=2)+
+      geom_path(data=conf.rgn)+
+      ggtitle(paste(sep=''))+
+      theme_bw()+
+      guides(colour = guide_legend(override.aes = list(size=2)))
+})
+```
+
+##Conclusions
+ Higher concentrations of atrazine exposure induced early hatching of embryos (9.5 to 30 hours early) across a range environmental conditions. Maternal transfer effects from higher atrazine concentrations were found to increase embryonic and larval mortality (2-25% more), decrease in rate of development in late- stage larvae (0.2-0.6 stages less), decrease snout-vent length at hatching (0.4 mm less). Studies have shown these differences in early amphibian development can have profound impacts during later life stages and on population viability. These findings reiterate the importance of studying atrazine in the context of sublethal, environmentally relevant conditions, and emphasize the need for the elucidation of the endocrine disruption mechanisms of atrazine in long term exposure studies.
